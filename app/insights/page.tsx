@@ -72,6 +72,30 @@ function InsightsContent() {
   );
   const [insights, setInsights] = useState<MentalHealthInsight[]>([]);
 
+  // Helper function to get insight type label
+  const getInsightTypeLabel = (type: string) => {
+    switch (type) {
+      case "tip":
+        return "Self-Care Tip";
+      case "question":
+        return "Reflection Question";
+      case "observation":
+        return "Observation";
+      default:
+        return "Insight";
+    }
+  };
+
+  // Define a helper interface for tag structures that could be encountered
+  interface TagObject {
+    tag?: {
+      id?: string;
+      name?: string;
+    };
+    id?: string;
+    name?: string;
+  }
+
   // Load reflections when component mounts or time period changes
   useEffect(() => {
     if (!user?.id) return;
@@ -122,16 +146,6 @@ function InsightsContent() {
 
     loadReflections();
   }, [user, timePeriod]);
-
-  // Define a helper interface for tag structures that could be encountered
-  interface TagObject {
-    tag?: {
-      id?: string;
-      name?: string;
-    };
-    id?: string;
-    name?: string;
-  }
 
   // Process reflections to generate mental health insights when reflections change
   useEffect(() => {
@@ -518,10 +532,11 @@ function InsightsContent() {
                       <SentimentChart
                         data={
                           sentimentAnalysis || {
-                            timePoints: [],
-                            positive: [],
-                            negative: [],
-                            neutral: [],
+                            overallSentiment: 0,
+                            sentimentByDay: [],
+                            positiveWords: [],
+                            negativeWords: [],
+                            sentimentTrend: "stable",
                           }
                         }
                       />
@@ -551,7 +566,7 @@ function InsightsContent() {
                                 key={i}
                                 className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
                               >
-                                {word}
+                                {word.word}
                               </Badge>
                             )) || (
                             <span className="text-sm text-muted-foreground">
@@ -570,7 +585,7 @@ function InsightsContent() {
                                 key={i}
                                 className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20"
                               >
-                                {word}
+                                {word.word}
                               </Badge>
                             )) || (
                             <span className="text-sm text-muted-foreground">
@@ -615,7 +630,7 @@ function InsightsContent() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <MoodCorrelationsChart correlations={moodCorrelations} />
+                    <MoodCorrelationsChart data={moodCorrelations} />
                   </CardContent>
                 </Card>
               </div>
@@ -674,9 +689,11 @@ function InsightsContent() {
                           </div>
                         </div>
                         <div>
-                          <h4 className="font-medium mb-1">{insight.title}</h4>
+                          <h4 className="font-medium mb-1">
+                            {getInsightTypeLabel(insight.type)}
+                          </h4>
                           <p className="text-sm text-muted-foreground">
-                            {insight.description}
+                            {insight.content}
                           </p>
                         </div>
                       </div>

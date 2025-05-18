@@ -23,20 +23,21 @@ import {
   Edit3,
   Save,
   ShieldAlert,
-  Activity,
+  Camera,
+  Award,
+  Heart,
   Clock,
-  Settings,
-  Key,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
 
 export default function ProfilePage() {
   const { user, updateUser } = useAuth();
   const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [isEditing, setIsEditing] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     if (user) {
@@ -49,14 +50,19 @@ export default function ProfilePage() {
   }
 
   const handleSaveChanges = async () => {
+    console.log("Saving profile changes:", { displayName });
     if (updateUser) {
       try {
         await updateUser({ ...user, displayName });
-        setIsEditing(false);
+        alert("Profile updated successfully! (Mock)");
       } catch (error) {
         console.error("Failed to update profile:", error);
+        alert("Failed to update profile. (Mock)");
       }
+    } else {
+      alert("Profile update functionality not fully implemented. (Mock)");
     }
+    setIsEditing(false);
   };
 
   const userInitial = displayName.charAt(0).toUpperCase();
@@ -65,333 +71,250 @@ export default function ProfilePage() {
   ).toLocaleDateString();
   const totalEntries = 7; // Placeholder
 
+  // Mock data for achievements and stats
+  const achievements = [
+    {
+      title: "First Entry",
+      description: "Created your first journal entry",
+      date: "2023-06-15",
+      icon: <BookOpen className="h-5 w-5 text-primary" />,
+    },
+    {
+      title: "Weekly Streak",
+      description: "Journaled for 7 days in a row",
+      date: "2023-07-02",
+      icon: <Award className="h-5 w-5 text-amber-500" />,
+    },
+    {
+      title: "Mood Tracker",
+      description: "Tracked your mood for 30 days",
+      date: "2023-08-10",
+      icon: <Heart className="h-5 w-5 text-rose-500" />,
+    },
+  ];
+
+  const stats = [
+    {
+      label: "Journal Entries",
+      value: totalEntries,
+      icon: <BookOpen className="h-5 w-5 text-primary/70" />,
+    },
+    {
+      label: "Days Active",
+      value: 12,
+      icon: <Clock className="h-5 w-5 text-primary/70" />,
+    },
+    {
+      label: "Joined Date",
+      value: joinDate,
+      icon: <CalendarDays className="h-5 w-5 text-primary/70" />,
+    },
+  ];
+
   return (
     <AuthenticatedLayout>
-      <div className="container px-4 py-6 md:py-8 max-w-6xl mx-auto">
-        <div className="flex flex-col space-y-6">
-          {/* Page header with improved visual hierarchy */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-                <User className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-                <span className="gradient-text bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
-                  My Profile
-                </span>
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">
-                Manage your account information and preferences
-              </p>
-            </div>
-          </div>
-
-          {/* Main profile content */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Profile card */}
-            <div className="md:col-span-1">
-              <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg"></div>
-                <CardHeader className="relative z-10 flex flex-col items-center text-center pb-2">
-                  <div className="relative mb-2">
-                    <Avatar className="h-24 w-24 ring-4 ring-primary/20 ring-offset-2 ring-offset-background">
+      <div className="container mx-auto max-w-5xl p-4 py-8 md:py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Profile Card */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="lg:col-span-1"
+          >
+            <Card className="shadow-xl border-none bg-card/80 backdrop-blur-lg overflow-hidden">
+              <div className="h-32 bg-gradient-to-r from-primary/30 to-primary/10 relative"></div>
+              <div className="px-6 pb-6">
+                <div className="-mt-16 mb-4 flex justify-center">
+                  <div className="relative">
+                    <Avatar className="h-24 w-24 ring-4 ring-background shadow-lg">
                       <AvatarImage
                         src={user.photoURL || undefined}
                         alt={displayName}
                       />
-                      <AvatarFallback className="text-3xl bg-gradient-to-br from-primary/20 to-accent/20">
+                      <AvatarFallback className="text-3xl bg-primary/10 text-primary">
                         {userInitial}
                       </AvatarFallback>
                     </Avatar>
                     <Button
                       size="icon"
-                      variant="outline"
-                      className="absolute bottom-0 right-0 h-8 w-8 rounded-full bg-background border-primary/20 hover:bg-primary/10"
-                      onClick={() => setIsEditing(!isEditing)}
+                      variant="secondary"
+                      className="absolute bottom-0 right-0 rounded-full h-8 w-8 shadow-md"
+                      title="Change profile picture"
                     >
-                      <Edit3 className="h-4 w-4 text-primary" />
+                      <Camera className="h-4 w-4" />
                     </Button>
                   </div>
-
+                </div>
+                <div className="text-center space-y-2">
                   {isEditing ? (
-                    <div className="w-full space-y-2">
-                      <Label htmlFor="displayName">Display Name</Label>
+                    <div className="flex items-center justify-center gap-2">
                       <Input
-                        id="displayName"
                         type="text"
                         value={displayName}
                         onChange={(e) => setDisplayName(e.target.value)}
-                        className="text-center"
+                        className="text-lg font-bold max-w-[200px]"
+                        aria-label="Display Name"
                       />
                       <Button
+                        size="sm"
                         onClick={handleSaveChanges}
-                        className="mt-2 w-full"
+                        className="h-9"
                       >
-                        <Save className="mr-2 h-4 w-4" /> Save Changes
+                        <Save className="h-4 w-4" />
                       </Button>
                     </div>
                   ) : (
-                    <>
-                      <CardTitle className="text-2xl mt-2">
-                        {displayName}
-                      </CardTitle>
-                      <CardDescription className="flex items-center justify-center gap-1 mt-1">
-                        <Mail className="h-3 w-3" /> {user.email}
-                      </CardDescription>
-                      <div className="mt-3">
-                        <Badge
-                          variant="outline"
-                          className="bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-                        >
-                          Active Member
-                        </Badge>
-                      </div>
-                    </>
+                    <div className="flex items-center justify-center gap-2">
+                      <h2 className="text-2xl font-bold">{displayName}</h2>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setIsEditing(true)}
+                        className="h-8 w-8"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
-                </CardHeader>
-                <CardContent className="relative z-10 pt-2 pb-4">
-                  <div className="flex flex-col space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-md bg-muted/30">
-                      <div className="flex items-center gap-2">
-                        <CalendarDays className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">Joined</span>
+                  <p className="flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5" /> {user.email}
+                  </p>
+                </div>
+                <div className="mt-6 pt-6 border-t">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                    Quick Stats
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2">
+                    {stats.map((stat, i) => (
+                      <div
+                        key={i}
+                        className="flex flex-col items-center p-2 rounded-lg bg-muted/50 hover:bg-muted/80 transition-colors"
+                      >
+                        <div className="mb-1">{stat.icon}</div>
+                        <div className="text-lg font-semibold">
+                          {stat.value}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {stat.label}
+                        </div>
                       </div>
-                      <span className="text-sm">{joinDate}</span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+
+          {/* Tabs Content */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="lg:col-span-2"
+          >
+            <Card className="shadow-xl border-none bg-card/80 backdrop-blur-lg h-full">
+              <CardHeader className="pb-2">
+                <Tabs
+                  defaultValue="overview"
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="overview">Overview</TabsTrigger>
+                    <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </CardHeader>
+              <CardContent>
+                {activeTab === "overview" ? (
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <User className="h-5 w-5 text-primary" /> About Me
+                      </h3>
+                      <Card className="bg-muted/30">
+                        <CardContent className="p-4">
+                          <p className="text-muted-foreground">
+                            No bio information yet. Edit your profile to add a
+                            personal bio.
+                          </p>
+                        </CardContent>
+                      </Card>
                     </div>
-                    <div className="flex items-center justify-between p-3 rounded-md bg-muted/30">
-                      <div className="flex items-center gap-2">
-                        <BookOpen className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">
-                          Journal Entries
-                        </span>
-                      </div>
-                      <span className="text-sm">{totalEntries}</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-md bg-muted/30">
-                      <div className="flex items-center gap-2">
-                        <Activity className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">Status</span>
-                      </div>
-                      <span className="text-sm">Active</span>
+
+                    <div>
+                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-primary" /> Recent
+                        Activity
+                      </h3>
+                      <Card className="bg-muted/30">
+                        <CardContent className="p-4 space-y-4">
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50">
+                            <div className="bg-primary/10 p-1.5 rounded-full">
+                              <BookOpen className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">
+                                Added a new journal entry
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Yesterday at 3:45 PM
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3 p-3 rounded-lg bg-background/50">
+                            <div className="bg-primary/10 p-1.5 rounded-full">
+                              <Heart className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                              <p className="font-medium">Tracked your mood</p>
+                              <p className="text-xs text-muted-foreground">
+                                3 days ago at 9:30 AM
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Account settings tabs */}
-            <div className="md:col-span-2">
-              <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm h-full">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Settings className="h-5 w-5 text-primary" />
-                    Account Settings
-                  </CardTitle>
-                  <CardDescription>
-                    Manage your account preferences and settings
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="general" className="w-full">
-                    <TabsList className="grid grid-cols-3 mb-6">
-                      <TabsTrigger value="general">General</TabsTrigger>
-                      <TabsTrigger value="security">Security</TabsTrigger>
-                      <TabsTrigger value="notifications">
-                        Notifications
-                      </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="general" className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="email">Email Address</Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={user.email}
-                            readOnly
-                            className="bg-muted/50"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Your email address is used for account notifications
-                            and recovery
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="timezone">Time Zone</Label>
-                          <Input
-                            id="timezone"
-                            value="(UTC-05:00) Eastern Time (US & Canada)"
-                            readOnly
-                            className="bg-muted/50"
-                          />
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Time zone is detected automatically from your
-                            browser
-                          </p>
-                        </div>
-
-                        <div className="pt-4 border-t">
-                          <Button className="w-full sm:w-auto">
-                            <Save className="mr-2 h-4 w-4" /> Save Changes
-                          </Button>
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="security" className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label className="text-base font-medium">
-                            Password
-                          </Label>
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="password"
-                              value="••••••••••••"
-                              readOnly
-                              className="bg-muted/50 flex-1"
-                            />
-                            <Button
-                              variant="outline"
-                              className="whitespace-nowrap"
-                            >
-                              <Key className="h-4 w-4 mr-2" /> Change Password
-                            </Button>
+                ) : (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <Award className="h-5 w-5 text-primary" /> Your
+                      Achievements
+                    </h3>
+                    <div className="space-y-3">
+                      {achievements.map((achievement, i) => (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ duration: 0.3, delay: i * 0.1 }}
+                          className="flex items-start gap-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="p-2 bg-background rounded-full">
+                            {achievement.icon}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Last changed: 3 months ago
-                          </p>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label className="text-base font-medium">
-                            Login Sessions
-                          </Label>
-                          <div className="p-4 rounded-md bg-muted/30">
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                                <span className="text-sm font-medium">
-                                  Current Session
-                                </span>
-                              </div>
-                              <Badge
-                                variant="outline"
-                                className="bg-green-500/10 text-green-500 hover:bg-green-500/20"
-                              >
-                                Active Now
-                              </Badge>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              Device:{" "}
-                              {navigator.userAgent.includes("Windows")
-                                ? "Windows"
-                                : navigator.userAgent.includes("Mac")
-                                ? "Mac"
-                                : "Unknown"}{" "}
-                              • Browser:{" "}
-                              {navigator.userAgent.includes("Chrome")
-                                ? "Chrome"
-                                : navigator.userAgent.includes("Firefox")
-                                ? "Firefox"
-                                : navigator.userAgent.includes("Safari")
-                                ? "Safari"
-                                : "Unknown"}{" "}
-                              • IP: 192.168.1.xxx
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="pt-4 border-t">
-                          <Button variant="destructive">
-                            Sign Out of All Devices
-                          </Button>
-                        </div>
-                      </div>
-                    </TabsContent>
-
-                    <TabsContent value="notifications" className="space-y-6">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/20">
                           <div>
-                            <Label
-                              htmlFor="email-notifications"
-                              className="font-medium"
-                            >
-                              Email Notifications
-                            </Label>
+                            <h4 className="font-medium">{achievement.title}</h4>
                             <p className="text-sm text-muted-foreground">
-                              Receive important updates via email
+                              {achievement.description}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Earned on{" "}
+                              {new Date(achievement.date).toLocaleDateString()}
                             </p>
                           </div>
-                          <div className="flex items-center h-5">
-                            <input
-                              id="email-notifications"
-                              type="checkbox"
-                              defaultChecked={true}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/20">
-                          <div>
-                            <Label
-                              htmlFor="reminder-notifications"
-                              className="font-medium"
-                            >
-                              Journal Reminders
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                              Receive reminders to write in your journal
-                            </p>
-                          </div>
-                          <div className="flex items-center h-5">
-                            <input
-                              id="reminder-notifications"
-                              type="checkbox"
-                              defaultChecked={false}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/20">
-                          <div>
-                            <Label
-                              htmlFor="insight-notifications"
-                              className="font-medium"
-                            >
-                              Weekly Insights
-                            </Label>
-                            <p className="text-sm text-muted-foreground">
-                              Receive weekly summaries of your mood and journal
-                              patterns
-                            </p>
-                          </div>
-                          <div className="flex items-center h-5">
-                            <input
-                              id="insight-notifications"
-                              type="checkbox"
-                              defaultChecked={true}
-                              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="pt-4 border-t">
-                          <Button className="w-full sm:w-auto">
-                            <Save className="mr-2 h-4 w-4" /> Save Notification
-                            Preferences
-                          </Button>
-                        </div>
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
         </div>
       </div>
     </AuthenticatedLayout>

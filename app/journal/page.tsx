@@ -34,7 +34,8 @@ import {
   Smile,
   ArrowRight,
   Loader2,
-  Edit3,
+  MessageSquare,
+  Lightbulb,
   Save,
 } from "lucide-react";
 import { JournalEntry } from "@/components/journal-entry";
@@ -50,7 +51,6 @@ import {
   Reflection,
 } from "@/lib/api";
 import { useToast } from "@/components/ui/use-toast";
-import { Label } from "@/components/ui/label";
 
 // Use the Reflection type from our API library
 type DailyReflection = Reflection;
@@ -300,43 +300,25 @@ function JournalContent() {
     }
   };
 
-  // Add handleAddMood function
-  const handleAddMood = (date: Date, mood: string) => {
-    // Find if there's an existing reflection for this date
-    const existingIndex = dailyReflections.findIndex(
-      (r) => new Date(r.date).toDateString() === date.toDateString()
-    );
-
-    // If found, update it; otherwise create a new one
-    if (existingIndex >= 0) {
-      const updatedReflections = [...dailyReflections];
-      updatedReflections[existingIndex] = {
-        ...updatedReflections[existingIndex],
-        mood: mood,
-      };
-      setDailyReflections(updatedReflections);
-    } else {
-      // Create a new reflection with just the mood
-      const newReflection: DailyReflection = {
-        id: `temp-${Date.now()}`,
-        userId: user?.id || "anonymous",
-        date: date.toISOString(),
-        mood: mood,
-        content: "",
-        tags: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      setDailyReflections([...dailyReflections, newReflection]);
+  // handleAddMood might also need API integration if it's intended to work independently.
+  // For now, mood changes will be saved as part of the full reflection save.
+  const handleAddMood = (date: Date, moodEmoji: string) => {
+    // This function now primarily updates the draft for the selected date.
+    // The actual save will happen via handleSaveReflection when the user saves the entry.
+    if (new Date(date).toDateString() === selectedDate.toDateString()) {
+      const numericMood = moodEmojis.indexOf(moodEmoji) + 1;
+      if (numericMood > 0) {
+        setDraftEntry((prev) => ({ ...prev, mood: numericMood }));
+      }
     }
-
-    // Also update the selected date and draft entry
-    setSelectedDate(date);
-    setDraftEntry((prev) => ({
-      ...prev,
-      mood: moodEmojis.indexOf(mood) + 1 || 3,
-      date: date.toISOString(),
-    }));
+    // To make this persist immediately (even without full save), an API call would be needed here.
+    // For example: if (selectedReflection) updateReflection(...) else createReflection(... with only mood ...)
+    // For simplicity, we'll rely on the main save button for now.
+    toast({
+      title: "Mood Selected",
+      description: "Your mood for the day is set. Save the entry to record it.",
+      variant: "default", // Changed from 'info'
+    });
   };
 
   // This useEffect for localStorage can be removed or kept as a strict fallback if API fails.
@@ -370,7 +352,7 @@ function JournalContent() {
     }
   }, [dailyReflections, isLoading]);
 
-  const handleSaveEntry = async () => {
+  const handleAddEntry = async () => {
     if (!draftEntry.content.trim() && (draftEntry.tags || []).length === 0) {
       toast({
         title: "Empty Reflection",
@@ -379,337 +361,332 @@ function JournalContent() {
       });
       return;
     }
-
     setIsSaving(true);
     const success = await handleSaveReflection({
       content: draftEntry.content,
-      tags: draftEntry.tags || [],
+      tags: draftEntry.tags || [], // Ensure tags is an array
       mood: draftEntry.mood,
     });
-
     if (success) {
       toast({
         title: "Reflection Saved",
         description: "Your journal entry has been recorded.",
       });
+      // Optionally, reset draftEntry if needed, or rely on useEffect to reload from dailyReflections
     }
     setIsSaving(false);
   };
 
   const handleDeleteReflection = async () => {
-    if (!selectedReflection || !selectedReflection.id) return;
+    if (!selectedReflection || !user) return;
 
     try {
       await deleteReflection(selectedReflection.id);
       toast({
-        title: "Entry Deleted",
-        description: "Your journal entry has been removed.",
+        title: "Reflection Deleted",
+        description: "Your journal entry has been deleted.",
       });
-      // Update local state
-      const updatedReflections = dailyReflections.filter(
-        (r) => r.id !== selectedReflection.id
-      );
-      setDailyReflections(updatedReflections);
-      // Reset draft entry
-      setDraftEntry({
-        content: "",
-        tags: [],
-        mood: 3,
-        date: selectedDate.toISOString(),
-      });
+      await fetchReflections();
     } catch (error) {
-      console.error("Failed to delete reflection:", error);
+      console.error("Error deleting reflection:", error);
       toast({
-        title: "Error",
-        description: "Failed to delete entry. Please try again.",
+        title: "Error Deleting Reflection",
+        description: "Failed to delete your journal entry. Please try again.",
         variant: "destructive",
       });
     }
   };
 
   return (
-    <div className="container px-4 py-6 md:py-8 max-w-6xl mx-auto">
-      <div className="flex flex-col space-y-6">
-        {/* Page header with improved visual hierarchy */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-              <BookOpen className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-              <span className="gradient-text bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
-                My Journal
-              </span>
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Record your thoughts, feelings, and reflections
-            </p>
-          </div>
-          <Button
-            onClick={handleSaveEntry}
-            className="sm:self-end group relative overflow-hidden"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent opacity-80 group-hover:opacity-100 transition-opacity"></div>
-            <span className="relative flex items-center">
-              <Plus className="h-4 w-4 mr-1" /> New Entry
-            </span>
-          </Button>
+    <div className="space-y-8">
+      {/* Header section with illustration */}
+      <div className="flex flex-wrap gap-6 items-center justify-between mb-2">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">Your Journal</h1>
+          <p className="text-muted-foreground">
+            Record your thoughts, feelings, and daily reflections
+          </p>
         </div>
 
-        {/* Calendar and journal main content with improved tabs */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Side panel with calendar */}
-          <div className="lg:col-span-4">
-            <Card className="h-full border-none shadow-lg bg-card/90 backdrop-blur-sm">
-              <CardHeader className="pb-3 border-b">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    Calendar
-                  </CardTitle>
-                </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            onClick={() => handleSelectDate(new Date())}
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+          >
+            <Calendar className="h-4 w-4" />
+            Today
+          </Button>
+
+          <Button
+            onClick={handleAddEntry}
+            variant="default"
+            className="gap-1.5"
+          >
+            <Plus className="h-4 w-4" />
+            New Entry
+          </Button>
+        </div>
+      </div>
+
+      {/* Main content grid with responsive layout */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+        {/* Calendar and mood tracking - span 5 columns on larger screens */}
+        <div className="md:col-span-5 space-y-6">
+          {/* Weekly Calendar for selecting dates */}
+          <WeeklyCalendar
+            reflections={dailyReflections}
+            onSelectDate={handleSelectDate}
+            onAddMood={handleAddMood}
+          />
+
+          {/* Mood tracking chart */}
+          <div>
+            <Card>
+              <CardHeader className="pb-2 border-b">
+                <CardTitle className="text-base font-medium flex items-center">
+                  <BarChart3 className="h-4 w-4 mr-2 text-secondary" />
+                  Mood Over Time
+                </CardTitle>
               </CardHeader>
-              <CardContent className="pt-4 px-2">
-                <WeeklyCalendar
-                  onSelectDate={handleSelectDate}
-                  reflections={dailyReflections}
-                  onAddMood={handleAddMood}
-                />
+              <CardContent className="pt-4">
+                <div className="h-36 sm:h-48">
+                  <MoodChart
+                    entries={dailyReflections.map((reflection) => ({
+                      id: reflection.id,
+                      date: reflection.date,
+                      mood: reflection.mood,
+                      content: reflection.content,
+                      tags: reflection.tags || [],
+                    }))}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
+        </div>
 
-          {/* Main content area with tabs and entries */}
-          <div className="lg:col-span-8">
-            <Card className="h-full border-none shadow-lg bg-card/90 backdrop-blur-sm">
-              <Tabs defaultValue="write" className="h-full flex flex-col">
-                <CardHeader className="pb-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <CardTitle className="text-lg font-medium">
-                      {format(selectedDate, "EEEE, MMMM d, yyyy")}
-                    </CardTitle>
+        {/* Entry form and list - span 7 columns on larger screens */}
+        <div className="md:col-span-7 space-y-6">
+          {/* Daily reflection form */}
+          <div>
+            <Card className="border shadow-lg overflow-hidden">
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-base font-medium flex items-center">
+                  <BookOpen className="h-4 w-4 mr-2 text-primary" />
+                  {selectedReflection
+                    ? "Edit Your Reflection"
+                    : "Add Daily Reflection"}
+                </CardTitle>
+                <CardDescription>
+                  {format(selectedDate, "EEEE, MMMM d, yyyy")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-5">
+                {isLoading ? (
+                  <div className="flex justify-center p-6">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
-                  <TabsList className="w-full grid grid-cols-2">
-                    <TabsTrigger
-                      value="write"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                    >
-                      <Edit3 className="h-4 w-4 mr-2" /> Write
-                    </TabsTrigger>
-                    <TabsTrigger
-                      value="entries"
-                      className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                    >
-                      <BookOpen className="h-4 w-4 mr-2" /> Entries
-                    </TabsTrigger>
-                  </TabsList>
-                </CardHeader>
-
-                <CardContent className="flex-1 pt-6 overflow-y-auto">
-                  <TabsContent value="write" className="h-full space-y-6">
-                    {/* Mood selector with enhanced visual appearance */}
-                    <div className="space-y-4">
-                      <div className="flex items-center">
-                        <Label
-                          htmlFor="mood"
-                          className="font-medium flex items-center gap-2 text-base"
-                        >
-                          <Smile className="h-4 w-4 text-primary" /> How are you
-                          feeling today?
-                        </Label>
-                      </div>
-                      <div className="flex justify-between items-center space-x-2 max-w-md mx-auto bg-muted/50 rounded-full p-1.5 shadow-inner">
-                        {["😔", "😐", "🙂", "😊", "😄"].map((emoji, i) => {
-                          const isSelected = draftEntry.mood === i + 1;
-                          return (
-                            <Button
-                              key={emoji}
-                              variant="ghost"
-                              className={`rounded-full h-12 w-12 flex items-center justify-center transition-all duration-200 hover:bg-muted ${
-                                isSelected
-                                  ? "bg-primary text-primary-foreground scale-110 shadow-md"
-                                  : "text-muted-foreground"
-                              }`}
-                              onClick={() =>
-                                setDraftEntry({ ...draftEntry, mood: i + 1 })
-                              }
-                            >
-                              <span className="text-xl">{emoji}</span>
-                            </Button>
-                          );
-                        })}
+                ) : (
+                  <>
+                    {/* Mood Selection */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium flex items-center">
+                        <Smile className="h-4 w-4 mr-1.5 text-primary/70" />
+                        How are you feeling today?
+                      </label>
+                      <div className="flex justify-center sm:justify-start space-x-2">
+                        {[1, 2, 3, 4, 5].map((moodValue) => (
+                          <button
+                            key={moodValue}
+                            type="button"
+                            onClick={() =>
+                              setDraftEntry({
+                                ...draftEntry,
+                                mood: moodValue,
+                              })
+                            }
+                            className={`mood-emoji ${
+                              draftEntry.mood === moodValue
+                                ? "selected ring-2 ring-primary ring-offset-2"
+                                : "hover:bg-muted/50 hover:scale-105"
+                            } transition-all duration-200`}
+                          >
+                            {moodEmojis[moodValue - 1]}
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Journal content editor with placeholder and improved styling */}
-                    <div className="space-y-4">
-                      <Label
+                    {/* Journal Entry */}
+                    <div className="space-y-3">
+                      <label
                         htmlFor="content"
-                        className="font-medium flex items-center gap-2 text-base"
+                        className="text-sm font-medium flex items-center"
                       >
-                        <BookOpen className="h-4 w-4 text-primary" /> Journal
-                        Entry
-                      </Label>
-                      <div className="relative">
-                        <Textarea
-                          id="content"
-                          value={draftEntry.content}
-                          onChange={(e) =>
-                            setDraftEntry({
-                              ...draftEntry,
-                              content: e.target.value,
-                            })
-                          }
-                          placeholder="Write your thoughts, feelings, or reflections here..."
-                          className="min-h-[200px] resize-y border-accent/20 focus:border-primary/40 bg-card/50 placeholder:text-muted-foreground/70"
-                        />
-                        <div className="absolute bottom-2 right-2 text-xs text-muted-foreground/70">
-                          {draftEntry.content.length} characters
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Tag selector with improved visual design */}
-                    <div className="space-y-4">
-                      <Label className="font-medium flex items-center gap-2 text-base">
-                        <Tag className="h-4 w-4 text-primary" /> Tags
-                      </Label>
-                      <TagSelector
-                        selectedTags={draftEntry.tags}
-                        onChange={(tags) =>
-                          setDraftEntry({ ...draftEntry, tags })
+                        <MessageSquare className="h-4 w-4 mr-1.5 text-primary/70" />
+                        Daily Journal Entry
+                      </label>
+                      <Textarea
+                        id="content"
+                        placeholder="Write your thoughts here..."
+                        className="min-h-[150px] resize-none focus:ring-primary"
+                        value={draftEntry.content}
+                        onChange={(e) =>
+                          setDraftEntry({
+                            ...draftEntry,
+                            content: e.target.value,
+                          })
                         }
                       />
                     </div>
 
-                    {/* Action buttons with improved styling and loading state */}
-                    <div className="flex justify-end pt-4 border-t space-x-2">
-                      {selectedReflection && selectedReflection.id && (
+                    {/* Tags */}
+                    <div className="space-y-3">
+                      <label className="text-sm font-medium flex items-center">
+                        <Tag className="h-4 w-4 mr-1.5 text-primary/70" />
+                        Add Tags
+                      </label>
+                      <TagSelector
+                        selectedTags={draftEntry.tags}
+                        onChange={(tags) =>
+                          setDraftEntry({
+                            ...draftEntry,
+                            tags,
+                          })
+                        }
+                      />
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex items-center justify-end space-x-2 pt-2">
+                      {selectedReflection && (
                         <Button
+                          type="button"
                           variant="outline"
+                          disabled={isSaving}
+                          className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           onClick={handleDeleteReflection}
-                          className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
                         >
                           Delete
                         </Button>
                       )}
                       <Button
-                        onClick={() => handleSaveEntry()}
-                        disabled={
-                          isSaving ||
-                          (draftEntry.content.trim().length === 0 &&
-                            !selectedReflection?.id)
-                        }
-                        className="relative overflow-hidden transition-all duration-300"
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          // Reset form or cancel edit
+                          if (selectedReflection) {
+                            setDraftEntry({
+                              content: selectedReflection.content || "",
+                              tags: selectedReflection.tags || [],
+                              mood:
+                                moodEmojis.indexOf(selectedReflection.mood) +
+                                  1 || 3,
+                              date: selectedReflection.date,
+                            });
+                          } else {
+                            setDraftEntry({
+                              content: "",
+                              tags: [],
+                              mood: 3,
+                              date: selectedDate.toISOString(),
+                            });
+                          }
+                        }}
+                        disabled={isSaving}
                       >
-                        <div className="absolute inset-0 bg-gradient-to-r from-primary to-accent opacity-80 hover:opacity-100 transition-opacity"></div>
-                        <span className="relative flex items-center">
-                          {isSaving ? (
-                            <>
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                              Saving...
-                            </>
-                          ) : (
-                            <>
-                              <Save className="mr-2 h-4 w-4" />
-                              Save Entry
-                            </>
-                          )}
-                        </span>
+                        Reset
+                      </Button>
+                      <Button
+                        type="submit"
+                        onClick={async () => {
+                          await handleSaveReflection({
+                            content: draftEntry.content,
+                            tags: draftEntry.tags,
+                            mood: draftEntry.mood,
+                          });
+                        }}
+                        disabled={isSaving}
+                        className="gap-1.5"
+                      >
+                        {isSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="h-4 w-4" />
+                            Save Entry
+                          </>
+                        )}
                       </Button>
                     </div>
-                  </TabsContent>
-
-                  <TabsContent value="entries" className="h-full space-y-6">
-                    {isLoading ? (
-                      <div className="flex items-center justify-center h-40">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      </div>
-                    ) : dailyReflections.length > 0 ? (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 gap-4">
-                          {dailyReflections
-                            .slice()
-                            .sort(
-                              (a, b) =>
-                                new Date(b.date).getTime() -
-                                new Date(a.date).getTime()
-                            )
-                            .map((reflection) => (
-                              <JournalEntry
-                                key={reflection.id}
-                                entry={{
-                                  id: reflection.id,
-                                  date: format(
-                                    parseISO(reflection.date),
-                                    "MMMM d, yyyy"
-                                  ),
-                                  mood: reflection.mood,
-                                  content: reflection.content,
-                                  tags: reflection.tags,
-                                }}
-                              />
-                            ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center h-40 text-center">
-                        <BookOpen className="h-10 w-10 text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">
-                          No journal entries yet.
-                        </p>
-                        <Button
-                          variant="link"
-                          onClick={() => {
-                            const tabTrigger = document.querySelector(
-                              '[data-state="inactive"][data-value="write"]'
-                            );
-                            if (tabTrigger && "click" in tabTrigger) {
-                              (tabTrigger as HTMLElement).click();
-                            }
-                          }}
-                          className="mt-2"
-                        >
-                          Start writing
-                        </Button>
-                      </div>
-                    )}
-                  </TabsContent>
-                </CardContent>
-              </Tabs>
+                  </>
+                )}
+              </CardContent>
             </Card>
           </div>
-        </div>
 
-        {/* Mood trends section with improved visual appeal */}
-        <div className="pt-6">
-          <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm">
-            <CardHeader className="pb-3 border-b">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                  <BarChart3 className="h-4 w-4 text-primary" />
-                  Mood Trends
-                </CardTitle>
-                <Link href="/insights">
-                  <Button variant="outline" size="sm" className="text-xs">
-                    <ArrowRight className="h-3 w-3 mr-1" /> Full Insights
-                  </Button>
-                </Link>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-4 overflow-x-auto">
-              {dailyReflections.length > 0 ? (
-                <div className="h-[200px] w-full min-w-[600px]">
-                  <MoodChart entries={dailyReflections} />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[200px] text-center">
-                  <BarChart3 className="h-10 w-10 text-muted-foreground mb-2" />
-                  <p className="text-muted-foreground">
-                    Add journal entries to see your mood trends over time.
-                  </p>
-                </div>
+          {/* Recent entries list */}
+          <div className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">Recent Entries</h3>
+              {entries.length > 0 && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/insights" className="flex items-center gap-1.5">
+                    <Lightbulb className="h-4 w-4" />
+                    View Insights
+                  </Link>
+                </Button>
               )}
-            </CardContent>
-          </Card>
+            </div>
+
+            {isLoading ? (
+              <div className="flex justify-center p-6">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : entries.length > 0 ? (
+              <div className="space-y-5">
+                {entries.map((entry) => (
+                  <JournalEntry key={entry.id} entry={entry} />
+                ))}
+                {entries.length >= 5 && (
+                  <div className="text-center pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setEntries((prev) => [
+                          ...prev,
+                          ...sampleEntries.slice(0, 3),
+                        ])
+                      }
+                    >
+                      Load More
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Card className="border-dashed border-2 p-6 bg-muted/30 flex flex-col items-center justify-center text-center">
+                <div className="rounded-full bg-primary/10 p-3 mb-3">
+                  <BookOpen className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="font-medium text-lg">No journal entries yet</h3>
+                <p className="text-muted-foreground mt-1 max-w-xs">
+                  Start tracking your mood and writing daily reflections to see
+                  your entries here.
+                </p>
+                <Button onClick={handleAddEntry} className="mt-4 gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Create Your First Entry
+                </Button>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>

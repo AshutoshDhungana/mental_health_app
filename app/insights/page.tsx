@@ -30,11 +30,10 @@ import {
   Brain,
   Activity,
   Lightbulb,
-  Smile,
-  PenLine,
-  BookOpen,
   AlertTriangle,
-  RefreshCcw,
+  TrendingDown,
+  MinusCircle,
+  Smile,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MoodChart } from "@/components/mood-chart";
@@ -52,18 +51,10 @@ import {
   MoodCorrelation,
   MentalHealthInsight,
 } from "@/lib/mental-health-analysis";
+import { Badge } from "@/components/ui/badge";
 
 // Time period options
 type TimePeriod = "week" | "month" | "3months" | "year" | "all";
-
-// Create a proper fallback for SentimentAnalysisResult
-const emptySentimentData: SentimentAnalysisResult = {
-  overallSentiment: 0,
-  sentimentByDay: [],
-  positiveWords: [],
-  negativeWords: [],
-  sentimentTrend: "stable",
-};
 
 // Component for the Insights page
 function InsightsContent() {
@@ -283,375 +274,429 @@ function InsightsContent() {
 
   // Render the component UI
   return (
-    <div className="container px-4 py-6 md:py-8 max-w-6xl mx-auto">
-      <div className="flex flex-col space-y-6">
-        {/* Page header with improved visual hierarchy */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-              <Lightbulb className="h-6 w-6 sm:h-7 sm:w-7 text-primary" />
-              <span className="gradient-text bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">
-                Mental Health Insights
-              </span>
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Track your progress and discover patterns in your mental health
-              journey
-            </p>
-          </div>
-
-          {/* Time period selector with improved styling */}
-          <div className="flex items-center gap-2 bg-muted/30 rounded-full p-1 shadow-inner self-end">
-            {[
-              { value: "week", label: "Week" },
-              { value: "month", label: "Month" },
-              { value: "3months", label: "Quarter" },
-              { value: "year", label: "Year" },
-              { value: "all", label: "All Time" },
-            ].map((period) => (
-              <Button
-                key={period.value}
-                onClick={() => setTimePeriod(period.value as TimePeriod)}
-                variant="ghost"
-                size="sm"
-                className={`px-3 py-1 rounded-full text-xs ${
-                  timePeriod === period.value
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {period.label}
-              </Button>
-            ))}
-          </div>
+    <div className="space-y-8">
+      {/* Header section with better styling */}
+      <div className="flex flex-wrap gap-6 items-center justify-between mb-2">
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold tracking-tight">
+            Mental Health Insights
+          </h1>
+          <p className="text-muted-foreground">
+            Discover patterns and trends in your mental wellness journey
+          </p>
         </div>
 
-        {/* Main content with improved tabs and cards */}
-        <Tabs
-          defaultValue={activeTab}
-          onValueChange={setActiveTab}
-          className="space-y-6"
-        >
-          <TabsList className="grid grid-cols-3 w-full max-w-md mx-auto bg-muted/50 p-1 rounded-lg">
-            <TabsTrigger
-              value="overview"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md"
+        {/* Time period selector */}
+        <div className="flex flex-wrap items-center gap-2 pl-4 pr-2 py-1.5 rounded-lg border bg-card/50">
+          {[
+            { value: "week", label: "Week" },
+            { value: "month", label: "Month" },
+            { value: "3months", label: "Quarter" },
+            { value: "year", label: "Year" },
+            { value: "all", label: "All Time" },
+          ].map((period) => (
+            <Button
+              key={period.value}
+              variant={timePeriod === period.value ? "default" : "ghost"}
+              size="sm"
+              className={timePeriod === period.value ? "shadow-sm" : ""}
+              onClick={() => setTimePeriod(period.value as TimePeriod)}
             >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="mood"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md"
+              {period.label}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="grid place-items-center py-12">
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-12 w-12 text-primary animate-spin" />
+            <p className="text-muted-foreground">
+              Analyzing your journal entries...
+            </p>
+          </div>
+        </div>
+      ) : error ? (
+        <Card className="border-destructive/30">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Error Loading Insights
+            </CardTitle>
+            <CardDescription>
+              We encountered a problem while analyzing your journal data
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>{error}</p>
+            <Button
+              className="mt-4"
+              onClick={() => {
+                setError(null);
+                setIsLoading(true);
+                setTimeout(() => setIsLoading(false), 1000);
+              }}
             >
-              <Activity className="h-4 w-4 mr-2" />
-              Mood Analysis
-            </TabsTrigger>
-            <TabsTrigger
-              value="themes"
-              className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-md"
-            >
-              <Brain className="h-4 w-4 mr-2" />
-              Themes
-            </TabsTrigger>
-          </TabsList>
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
+      ) : reflections.length === 0 ? (
+        <Card className="border-dashed border-2 p-8 bg-muted/30 flex flex-col items-center justify-center text-center">
+          <div className="rounded-full bg-primary/10 p-4 mb-4">
+            <Brain className="h-10 w-10 text-primary" />
+          </div>
+          <h3 className="font-medium text-xl">No journal data to analyze</h3>
+          <p className="text-muted-foreground mt-2 max-w-md">
+            Start writing daily reflections in your journal to see personalized
+            insights and trends. The more you write, the more valuable your
+            insights will become!
+          </p>
+          <Button className="mt-6" asChild>
+            <Link href="/journal">
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Go to Journal
+            </Link>
+          </Button>
+        </Card>
+      ) : (
+        <>
+          {/* Insights Tabs with improved design */}
+          <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="grid grid-cols-4 h-11 mb-6">
+              <TabsTrigger
+                value="overview"
+                className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
+              >
+                <Activity className="h-4 w-4 mr-2" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger
+                value="sentiment"
+                className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Sentiment
+              </TabsTrigger>
+              <TabsTrigger
+                value="themes"
+                className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
+              >
+                <PieChart className="h-4 w-4 mr-2" />
+                Themes
+              </TabsTrigger>
+              <TabsTrigger
+                value="mood"
+                className="data-[state=active]:bg-primary/15 data-[state=active]:text-primary"
+              >
+                <Smile className="h-4 w-4 mr-2" />
+                Mood
+              </TabsTrigger>
+            </TabsList>
 
-          {isLoading ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="flex flex-col items-center">
-                <Loader2 className="h-12 w-12 text-primary animate-spin mb-4" />
-                <p className="text-muted-foreground">
-                  Loading your insights...
-                </p>
-              </div>
-            </div>
-          ) : error ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="flex flex-col items-center">
-                <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
-                  <AlertTriangle className="h-6 w-6 text-destructive" />
-                </div>
-                <p className="text-muted-foreground">{error}</p>
-                <Button
-                  onClick={() => window.location.reload()}
-                  className="mt-4"
-                >
-                  <RefreshCcw className="h-4 w-4 mr-2" /> Retry
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Overview Tab */}
-              <TabsContent value="overview" className="mt-6">
-                {/* Mood Stats Summary Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                  {/* Average Mood Card */}
-                  <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent rounded-lg"></div>
-                    <CardHeader className="pb-2 relative z-10">
-                      <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                        <Activity className="h-4 w-4 text-primary" />
-                        Average Mood
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="relative z-10">
-                      <div className="flex items-center">
-                        <div className="text-4xl font-bold mr-2">
-                          {getMoodStats().average.toFixed(1)}
-                        </div>
-                        <div className="text-4xl">
-                          {getMoodStats().highest || "😊"}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {getMoodStats().change > 0
-                          ? "Improving"
-                          : getMoodStats().change < 0
-                          ? "Declining"
-                          : "Stable"}{" "}
-                        trend
-                      </p>
-                    </CardContent>
-                  </Card>
+            <TabsContent value="overview" className="mt-0">
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                {/* Quick Stats Cards */}
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2 space-y-0">
+                    <CardDescription>Entries Analyzed</CardDescription>
+                    <CardTitle className="text-2xl">
+                      {reflections.length}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground">
+                      Over{" "}
+                      {timePeriod === "week"
+                        ? "the past week"
+                        : timePeriod === "month"
+                        ? "the past month"
+                        : timePeriod === "3months"
+                        ? "the past quarter"
+                        : timePeriod === "year"
+                        ? "the past year"
+                        : "all time"}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Common Moods Card */}
-                  <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-accent/5 to-transparent rounded-lg"></div>
-                    <CardHeader className="pb-2 relative z-10">
-                      <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                        <Smile className="h-4 w-4 text-accent" />
-                        Most Common
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="relative z-10">
-                      <div className="flex items-center justify-between">
-                        <div className="text-4xl">
-                          {getMoodStats().highest || "😊"}
-                        </div>
-                        <div className="text-4xl">
-                          {getMoodStats().lowest || "😐"}
-                        </div>
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Most frequent moods in this period
-                      </p>
-                    </CardContent>
-                  </Card>
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow bg-gradient-to-br from-primary/5 to-transparent">
+                  <CardHeader className="pb-2 space-y-0">
+                    <CardDescription>Average Mood</CardDescription>
+                    <CardTitle className="text-2xl flex items-center gap-1">
+                      {getMoodStats().average.toFixed(1)}
+                      <span className="text-xl">
+                        {getMoodStats().average >= 4
+                          ? "😊"
+                          : getMoodStats().average >= 3
+                          ? "🙂"
+                          : getMoodStats().average >= 2
+                          ? "😐"
+                          : "😕"}
+                      </span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-sm text-muted-foreground flex items-center">
+                      {getMoodStats().change > 0 ? (
+                        <>
+                          <TrendingUp className="text-emerald-500 h-4 w-4 mr-1" />
+                          <span className="text-emerald-600">Improving</span>
+                        </>
+                      ) : getMoodStats().change < 0 ? (
+                        <>
+                          <TrendingDown className="text-rose-500 h-4 w-4 mr-1" />
+                          <span className="text-rose-600">Declining</span>
+                        </>
+                      ) : (
+                        <>
+                          <MinusCircle className="text-muted-foreground h-4 w-4 mr-1" />
+                          <span>Stable</span>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Tags Card */}
-                  <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-secondary/5 to-transparent rounded-lg"></div>
-                    <CardHeader className="pb-2 relative z-10">
-                      <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                        <Tag className="h-4 w-4 text-secondary" />
-                        Top Tags
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="relative z-10">
-                      <div className="flex flex-wrap gap-1.5">
-                        {getTopTags(5).map((tag, index) => (
-                          <span
-                            key={index}
-                            className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium bg-secondary/10 text-secondary-foreground border-secondary/20"
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2 space-y-0">
+                    <CardDescription>Top Tags</CardDescription>
+                    <CardTitle className="text-2xl">
+                      {getTopTags(1)[0]?.tag || "None"}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-1.5">
+                      {getTopTags(5)
+                        .slice(1)
+                        .map((tag, i) => (
+                          <Badge
+                            key={i}
+                            variant="secondary"
+                            className="bg-secondary/10"
                           >
                             {tag.tag}
-                          </span>
+                          </Badge>
                         ))}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Based on {reflections.length} journal entries
-                      </p>
-                    </CardContent>
-                  </Card>
-
-                  {/* Entries Card */}
-                  <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-br from-pink/5 to-transparent rounded-lg"></div>
-                    <CardHeader className="pb-2 relative z-10">
-                      <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                        <BookOpen className="h-4 w-4 text-pink" />
-                        Journaling
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="relative z-10">
-                      <div className="text-4xl font-bold">
-                        {reflections.length}
-                      </div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Total entries in this period
-                      </p>
-                      <div className="mt-2">
-                        <Link href="/journal">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="w-full"
-                          >
-                            <PenLine className="h-3 w-3 mr-1.5" />
-                            Write New Entry
-                          </Button>
-                        </Link>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Main Charts */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-                  {/* Mood Chart */}
-                  <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm">
-                    <CardHeader className="pb-3 border-b">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                          <BarChart3 className="h-4 w-4 text-primary" />
-                          Mood Over Time
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4 h-[300px]">
-                      <MoodChart entries={reflections} />
-                    </CardContent>
-                  </Card>
-
-                  {/* Sentiment Analysis */}
-                  <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm">
-                    <CardHeader className="pb-3 border-b">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                          <PieChart className="h-4 w-4 text-primary" />
-                          Sentiment Analysis
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="pt-4 h-[300px]">
-                      <SentimentChart
-                        data={sentimentAnalysis || emptySentimentData}
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Mental Health Insights */}
-                <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm mb-6">
-                  <CardHeader className="pb-3 border-b">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                        <Lightbulb className="h-4 w-4 text-primary" />
-                        Personalized Insights
-                      </CardTitle>
                     </div>
+                  </CardContent>
+                </Card>
+
+                {/* Key Insights cards - span full width on small screens */}
+                <Card className="md:col-span-2 lg:col-span-3 shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center">
+                      <Brain className="h-5 w-5 mr-2 text-primary" />
+                      Key Insights
+                    </CardTitle>
+                    <CardDescription>
+                      Personalized observations based on your reflections
+                    </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-4">
+                  <CardContent>
                     <MentalHealthInsights insights={insights} />
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </div>
+            </TabsContent>
 
-              {/* Mood Analysis Tab */}
-              <TabsContent value="mood" className="space-y-6 mt-6">
-                <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm">
-                  <CardHeader className="pb-3 border-b">
-                    <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                      <BarChart3 className="h-4 w-4 text-primary" />
-                      Mood Distribution
+            <TabsContent value="sentiment" className="mt-0">
+              <div className="grid gap-6">
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <TrendingUp className="h-5 w-5 mr-2 text-primary" />
+                      Sentiment Analysis
                     </CardTitle>
                     <CardDescription>
-                      Frequency of different moods in your journal entries
+                      Trends in your emotional language over time
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="pt-6 h-[350px]">
-                    <MoodChart entries={reflections} />
-                  </CardContent>
-                </Card>
-
-                <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm">
-                  <CardHeader className="pb-3 border-b">
-                    <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                      <TrendingUp className="h-4 w-4 text-primary" />
-                      Mood Correlations
-                    </CardTitle>
-                    <CardDescription>
-                      Relationships between tags and mood states
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <MoodCorrelationsChart data={moodCorrelations} />
-                  </CardContent>
-                </Card>
-              </TabsContent>
-
-              {/* Themes Tab */}
-              <TabsContent value="themes" className="space-y-6 mt-6">
-                <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm">
-                  <CardHeader className="pb-3 border-b">
-                    <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                      <Brain className="h-4 w-4 text-primary" />
-                      Theme Analysis
-                    </CardTitle>
-                    <CardDescription>
-                      Common themes and topics in your journal entries
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6 h-[400px]">
-                    <ThemeAnalysisChart data={themeAnalysis} />
-                  </CardContent>
-                </Card>
-
-                {/* Top Tags Card with more detail */}
-                <Card className="border-none shadow-lg bg-card/90 backdrop-blur-sm">
-                  <CardHeader className="pb-3 border-b">
-                    <CardTitle className="text-lg font-medium flex items-center gap-1.5">
-                      <Tag className="h-4 w-4 text-primary" />
-                      Tag Frequency
-                    </CardTitle>
-                    <CardDescription>
-                      Tags you use most often in your journal entries
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-6">
-                    <div className="flex flex-wrap gap-2">
-                      {getTopTags(20).map((tag, index) => {
-                        // Calculate size based on frequency
-                        const sizeClass =
-                          index < 5
-                            ? "text-lg font-medium"
-                            : index < 10
-                            ? "text-base"
-                            : "text-sm";
-
-                        // Calculate color based on position
-                        const colors = [
-                          "bg-primary/10 text-primary border-primary/20",
-                          "bg-secondary/10 text-secondary-foreground border-secondary/20",
-                          "bg-accent/10 text-accent-foreground border-accent/20",
-                          "bg-pink/10 text-pink-foreground border-pink/20",
-                          "bg-yellow/10 text-yellow-foreground border-yellow/20",
-                          "bg-muted/30 text-muted-foreground border-muted/30",
-                        ];
-
-                        const colorClass = colors[index % colors.length];
-
-                        return (
-                          <span
-                            key={index}
-                            className={`inline-flex items-center rounded-full border px-2.5 py-0.5 ${sizeClass} ${colorClass}`}
-                          >
-                            {tag.tag}{" "}
-                            <span className="ml-1.5 text-xs opacity-70">
-                              ({tag.count})
-                            </span>
-                          </span>
-                        );
-                      })}
+                  <CardContent>
+                    <div className="h-80">
+                      <SentimentChart
+                        data={
+                          sentimentAnalysis || {
+                            timePoints: [],
+                            positive: [],
+                            negative: [],
+                            neutral: [],
+                          }
+                        }
+                      />
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
-            </>
-          )}
-        </Tabs>
-      </div>
+
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Lightbulb className="h-5 w-5 mr-2 text-primary" />
+                      Word Analysis
+                    </CardTitle>
+                    <CardDescription>
+                      Common positive and negative words in your journal
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="font-medium">Positive Words</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {sentimentAnalysis?.positiveWords
+                            ?.slice(0, 12)
+                            .map((word, i) => (
+                              <Badge
+                                key={i}
+                                className="bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20"
+                              >
+                                {word}
+                              </Badge>
+                            )) || (
+                            <span className="text-sm text-muted-foreground">
+                              No data available
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <h4 className="font-medium">Negative Words</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {sentimentAnalysis?.negativeWords
+                            ?.slice(0, 12)
+                            .map((word, i) => (
+                              <Badge
+                                key={i}
+                                className="bg-rose-500/10 text-rose-600 hover:bg-rose-500/20"
+                              >
+                                {word}
+                              </Badge>
+                            )) || (
+                            <span className="text-sm text-muted-foreground">
+                              No data available
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="themes" className="mt-0">
+              <div className="grid gap-6">
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <PieChart className="h-5 w-5 mr-2 text-primary" />
+                      Theme Analysis
+                    </CardTitle>
+                    <CardDescription>
+                      Prevalent themes found in your journal entries
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-80">
+                      <ThemeAnalysisChart data={themeAnalysis} />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Tag className="h-5 w-5 mr-2 text-primary" />
+                      Correlation Between Themes and Mood
+                    </CardTitle>
+                    <CardDescription>
+                      How different topics correlate with your mood
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <MoodCorrelationsChart correlations={moodCorrelations} />
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="mood" className="mt-0">
+              <div className="grid gap-6">
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <BarChart3 className="h-5 w-5 mr-2 text-primary" />
+                      Mood Over Time
+                    </CardTitle>
+                    <CardDescription>
+                      Visualize your mood fluctuations throughout{" "}
+                      {timePeriod === "week"
+                        ? "the past week"
+                        : timePeriod === "month"
+                        ? "the past month"
+                        : timePeriod === "3months"
+                        ? "the past quarter"
+                        : timePeriod === "year"
+                        ? "the past year"
+                        : "all time"}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="py-4 h-96">
+                    <MoodChart
+                      entries={reflections.map((r) => ({
+                        id: r.id,
+                        date: r.date,
+                        mood: r.mood,
+                        content: r.content || "",
+                        tags: Array.isArray(r.tags) ? r.tags : [],
+                      }))}
+                    />
+                  </CardContent>
+                </Card>
+
+                <Card className="shadow-sm border-card/60 hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Clock className="h-5 w-5 mr-2 text-primary" />
+                      Mood Patterns
+                    </CardTitle>
+                    <CardDescription>
+                      Potentially useful patterns identified in your mood data
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {insights.slice(0, 3).map((insight, i) => (
+                      <div key={i} className="flex">
+                        <div className="mr-4 mt-1">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Lightbulb className="h-4 w-4 text-primary" />
+                          </div>
+                        </div>
+                        <div>
+                          <h4 className="font-medium mb-1">{insight.title}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {insight.description}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+
+                    {insights.length === 0 && (
+                      <div className="text-center py-4">
+                        <p className="text-muted-foreground">
+                          Continue journaling to reveal patterns in your mood
+                          data
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   );
 }

@@ -2,22 +2,25 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../lib/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../lib/generated/prisma"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
   reflections Reflection[]
+
+  @@map("users")
 }
 
 model Reflection {
@@ -35,13 +38,16 @@ model Reflection {
 
   @@index([userId])
   @@index([date])
+  @@map("reflections")
 }
 
 model Tag {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  createdAt DateTime @default(now())
+  id          String          @id @default(cuid())
+  name        String          @unique
+  createdAt   DateTime        @default(now())
   reflections ReflectionTag[]
+
+  @@map("tags")
 }
 
 model ReflectionTag {
@@ -54,4 +60,5 @@ model ReflectionTag {
   @@id([reflectionId, tagId])
   @@index([reflectionId])
   @@index([tagId])
+  @@map("reflection_tags")
 }
